@@ -2,6 +2,8 @@
 
 在 **120 万字词**语料中按正则模式检索中文字词。受 [Nutrimatic](https://nutrimatic.org/) 启发，针对中文重做了模式维度。
 
+**在线使用：<https://dstty.github.io/nutri-zh/>**
+
 ```
 .国              → 中国  美国  英国  法国  德国  韩国 …
 [东西南北]风      → 东风  西风  北风  南风  西北风  东南风 …
@@ -10,19 +12,14 @@
 ..*人            → 中国人  机器人  主持人  负责人 …
 ```
 
-## 快速开始
+## 本地运行
 
 ```bash
 python serve.py                 # 启动本地服务并自动打开浏览器
 ```
 
 需要本地服务的原因：直接以 `file://` 打开 `index.html` 时，浏览器会拦截本地
-`fetch` 读取数据（同源策略）。
-
-数据已随仓库提供，克隆后即可运行。若想从原始数据集重建索引，见下方「重建索引」。
-
-> **在线预览**：仓库设置里开启 Pages（Settings → Pages → Source: `main` / `/ (root)`）
-> 后，即可通过 `https://dstty.github.io/nutri-zh/` 直接使用，无需本地服务。
+`fetch` 读取数据（同源策略）。仓库根目录即站点根目录，克隆后开箱可用。
 
 ## 语法
 
@@ -60,8 +57,11 @@ python serve.py                 # 启动本地服务并自动打开浏览器
 | 语料来源 | [rime-ice](https://github.com/iDvel/rime-ice) 简体词库 + [rime-essay](https://github.com/rime/rime-essay) |
 | 单字字段 | 笔画名序列（26 种笔形）、常用度权重 |
 
-`web/data/` 下三个文件：`chars.txt.gz`（单字）、`words.bin.gz`（词流 + 块级倒排）、
-`meta.json`（元信息）。
+目录布局：仓库根目录即站点根目录，`css/` `js/` 是前端，`asset/` 是查询索引
+（`chars.txt.gz` 单字表、`words.bin.gz` 词流 + 块级倒排、`meta.json` 元信息）。
+`data/` 存放构建用的源词表，与站点产物分离。
+
+`.nojekyll` 用于跳过 GitHub Pages 的 Jekyll 处理。
 
 词流按**词长升序、同长度按频次降序**排列，因此高频词集中在前面，扫描可以
 提前出结果；块级首字倒排则让带起始字符约束的模式跳过绝大多数块。
