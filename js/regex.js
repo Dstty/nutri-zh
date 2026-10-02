@@ -34,17 +34,38 @@ export function normalizePattern(input) {
   return out;
 }
 
+/**
+ * 把 Nutrimatic 风格的 `?`(任一字符) 转成正则的 `.`。
+ *
+ * Nutrimatic 用 `?` 表示通配, 而 Unix 正则里 `?` 是量词 —— 两者冲突。
+ * 这里统一到 Nutrimatic 一侧: 裸露的 `?` 一律视作「任一字符」;
+ * 需要「零或一次」时用 `{0,1}`。
+ * 字符类内部与已转义的 `?` 不动。
+ */
+export function nutrimaticToRegex(src) {
+  let out = '';
+  let inClass = false;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (c === '\\') { out += c + (src[i + 1] ?? ''); i++; continue; }
+    if (c === '[') inClass = true;
+    else if (c === ']') inClass = false;
+    if (c === '?' && !inClass) { out += '.'; continue; }
+    out += c;
+  }
+  return out;
+}
+
 /** 元字符(需要转义才对字面匹配有意义)。 */
 const META = new Set(['.', '[', ']', '(', ')', '*', '+', '?', '|', '{', '}', '^', '$', '\\']);
 
 export class Regex {
   constructor(pattern) {
-    this.source = normalizePattern(pattern);
+    this.raw = normalizePattern(pattern);
+    this.source = nutrimaticToRegex(this.raw);
     if (this.source === '') this.source = '.';
-    // 用非捕获组包裹, 便于前后加锚点
-    let body = this.source;
     try {
-      this.re = new RegExp(body, 'u');
+      this.re = new RegExp(this.source, 'u');
     } catch (err) {
       const e = new Error(describeError(err.message, this.source));
       e.patternPos = 0;

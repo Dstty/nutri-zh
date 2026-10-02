@@ -148,9 +148,10 @@ function main() {
   const commonSet = new Set(loadJsonl(join(SRC, 'hz_common.jsonl')).map((r) => r.char));
   console.log(`  全量 ${full.length} 字, 常用 ${commonSet.size} 字`);
 
-  // ---- 1. 单字表 ----
+  // ---- 1. 单字表: 字 \t 笔画码串 \t 权重 \t 拼音 ----
   const charLines = [];
   let strokeMiss = 0;
+  let pyMissing = 0;
   for (const r of full) {
     let code = '';
     for (const name of r.stroke_seq || []) {
@@ -158,11 +159,13 @@ function main() {
       if (c) code += c; else { code += '?'; strokeMiss++; }
     }
     let w = (commonSet.has(r.char) ? 100000 : 0) + (r.words || []).length * 10;
-    charLines.push(`${r.char}\t${code}\t${w}`);
+    const py = (r.pinyin && r.pinyin[0]) || '';
+    if (!py) pyMissing++;
+    charLines.push(`${r.char}\t${code}\t${w}\t${py}`);
   }
   writeFileSync(join(OUT, 'chars.txt.gz'),
     gzipSync(Buffer.from(charLines.join('\n'), 'utf8'), { level: 9 }));
-  console.log(`  chars.txt.gz  ${charLines.length} 字`);
+  console.log(`  chars.txt.gz  ${charLines.length} 字 (缺拼音 ${pyMissing})`);
 
   // ---- 2. 词流 + 块级倒排 ----
   const words = buildWords(full);

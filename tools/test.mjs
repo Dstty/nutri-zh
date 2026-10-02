@@ -31,12 +31,24 @@ const CAL = [
   ['(?:中|国)家', '国家'], ['[一-五]月', '三月'], ['[一-五]月', '七月'],
 ];
 let diff = 0;
+let skipped = 0;
 for (const [pat, str] of CAL) {
+  // `?` 在本工具里是 Nutrimatic 式通配符(等同 `.`), 与原生 RegExp 的量词语义
+  // 有意不同, 不参与原生比对, 单独在下文断言。
+  if (/(^|[^\\[])\?/.test(pat)) { skipped++; continue; }
   const native = new RegExp(`^(?:${pat})$`, 'u').test(str);
   const ours = compilePattern(pat).test(str);
   if (native !== ours) { diff++; console.log(`  DIFF ${pat} / ${str}: native=${native} ours=${ours}`); }
 }
-ok(`与原生一致(${CAL.length} 例)`, diff === 0, `差异 ${diff}`);
+ok(`与原生一致(${CAL.length - skipped} 例, 跳过 ${skipped} 个含 ? 的)`, diff === 0, `差异 ${diff}`);
+
+console.log('\n== ? 作通配符(有意区别于原生量词) ==');
+ok('? = 任一字符', compilePattern('?').test('中') && !compilePattern('?').test('中国'));
+ok('中?国 匹配 中x国', compilePattern('中?国').test('中x国'));
+ok('中?国 匹配 中中国', compilePattern('中?国').test('中中国'));
+ok('中?国 不匹配两字 中国', !compilePattern('中?国').test('中国'));
+ok('量词仍可用 {0,1}',
+  compilePattern('中{0,1}国').test('国') && compilePattern('中{0,1}国').test('中国'));
 
 console.log('\n== 全角归一(有意为之的差异) ==');
 ok('． 被归一为 .', compilePattern('．').test('中'));
@@ -65,8 +77,55 @@ function ours(q, cap = 100000) {
   const engine = createSearch(corpus, q);
   if (engine.error) throw engine.error;
   const buf = [];
-  for (let b = 0; b < corpus.blockCount; b++) engine.scanBlocks(b, b + 1, buf);
-  return buf.map((h) => corpus.wordAt(h.i));
+  for (let b = 0; b < engine.totalBlocks; b++) engine.scanBlock(b, buf);
+  let items = buf;
+  if (engine.kind === 'and' && engine.finish) items = engine.finish();
+  if (typeof engine.finalize === 'function') items = engine.finalize(items);
+  return items.map((h) => h.ch ?? (h.word ?? (h.i !== undefined ? corpus.wordAt(h.i) : h)));
+}
+
+console.log('\n== 新语法: 属性筛选 ==');
+{
+  const py = ours('#\u58f0\u8c03\u0031,\u58f0\u6bcdzh,\u9996\u7b14\u70b9');
+  console.log(`  #声调1,声母zh,首笔点 -> ${py.length} 字: ${py.slice(0, 12).join('')}`);
+  const allOk = py.every((ch) => {
+    const info = corpus.chars.get(ch);
+    return info.py?.tone === 1 && info.py?.initial === 'zh' && info.strokeNames[0] === '\u70b9';
+  });
+  ok('属性筛选结果全部符合', py.length > 0 && allOk, `n=${py.length}`);
+  ok('含"之"', py.includes('\u4e4b'));
+
+  const nine = ours('#9\u753b');
+  console.log(`  #9画 -> ${nine.length} 字`);
+  ok('#9画 全部 9 画', nine.every((c) => corpus.chars.get(c).strokeNames.length === 9), `n=${nine.length}`);
+}
+
+console.log('\n== 新语法: 字集引用 [#属性] ==');
+{
+  const r = ours('^[#9\u753b]{4}$');
+  console.log(`  ^[#9画]{4}$ -> ${r.length} 条: ${r.slice(0, 12).join(' ')}`);
+  const allOk = r.every((w) => w.length === 4 && [...w].every((c) => corpus.chars.get(c)?.strokeNames.length === 9));
+  ok('四字词每字 9 画', r.length > 0 && allOk, `n=${r.length}`);
+  ok('含 总统选举', r.includes('\u603b\u7edf\u9009\u4e3e'));
+}
+
+console.log('\n== 新语法: 取字与交集 @?风&@金? ==');
+{
+  const r = ours('@?\u98ce&@\u91d1?');
+  console.log(`  @?风&@金? -> ${r.length} 字: ${r.slice(0, 30).join('')}`);
+  ok('交集非空', r.length > 0, `n=${r.length}`);
+  ok('含 军', r.includes('\u519b'), r.slice(0, 20).join(''));
+  const set = new Set();
+  for (let i = 0; i < corpus.wordCount; i++) set.add(corpus.wordAt(i));
+  const verified = r.every((c) => set.has(c + '\u98ce') && set.has('\u91d1' + c));
+  ok('逐个验证 X风 与 金X 均存在', verified, '');
+}
+
+console.log('\n== 回归: 普通两字查询不受取字影响 ==');
+{
+  const r = ours('.\u56fd');
+  console.log(`  .国 -> ${r.length} 条, 例: ${r.slice(0, 6).join(' ')}`);
+  ok('.国 返回词而非字', r.length > 1000 && r.includes('\u4e2d\u56fd'), `n=${r.length}`);
 }
 
 // 基准语义: 默认在「词内任意位置」找匹配(与扫描器一致), 不是整词匹配。

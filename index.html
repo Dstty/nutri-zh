@@ -11,14 +11,14 @@
 
 <header class="top">
   <h1><span class="seal">字</span>汉字正则查找</h1>
-  <p class="tagline">在一百万字词中按模式检索 —— <code>.</code> 匹配任一字符，<code>[东西南北]风</code>、<code>{2}</code> 限定词长</p>
+  <p class="tagline">在一百二十万字词中按模式检索 —— <code>.</code> 或 <code>?</code> 匹配任一字符，<code>[东西南北]风</code>、<code>{2}</code> 限定词长，<code>#</code> 按属性筛字</p>
 </header>
 
 <main class="wrap">
   <section class="searchbox">
     <div class="field">
       <input id="q" type="text" autocomplete="off" spellcheck="false"
-             placeholder="输入模式，例如   .国   或   [东西南北]风   或   .{2}">
+             placeholder="输入模式，例如   .国   或   [东西南北]风   或   #声调1,声母zh,首笔点">
       <button id="go" class="primary" title="搜索 (Enter)">查找</button>
       <button id="clear" title="清空 (Esc)">清空</button>
     </div>
@@ -29,6 +29,45 @@
       <span id="stat" class="stat">待输入</span>
     </div>
     <div id="err" class="err" hidden></div>
+
+    <details class="syntax">
+      <summary>语法速查</summary>
+      <div class="syntax-body">
+        <div class="syntax-col">
+          <h4>字符与模式</h4>
+          <ul>
+            <li><code>.</code> 或 <code>?</code> — 任一字符</li>
+            <li><code>[东西南北]</code> — 字符类</li>
+            <li><code>[^东]</code> — 排除类</li>
+            <li><code>[一-五]</code> — 范围</li>
+            <li><code>X*</code> <code>X+</code> <code>X{2,4}</code> — 重复</li>
+            <li><code>(中|国)</code> — 分组或</li>
+            <li><code>{2}</code> — 只要二字词</li>
+            <li><code>^中</code> <code>国$</code> — 首/尾锚定</li>
+          </ul>
+        </div>
+        <div class="syntax-col">
+          <h4>按属性筛字 <code>#</code></h4>
+          <ul>
+            <li><code>#9画</code> / <code>#9-11画</code> — 笔画数</li>
+            <li><code>#首笔点</code> <code>#起笔横</code></li>
+            <li><code>#声母zh</code> <code>#声调1</code> <code>#韵母ong</code></li>
+            <li><code>#拼音zhong</code> — 整音节</li>
+            <li><code>#声调1,声母zh,首笔点</code> — 多条件并列</li>
+          </ul>
+        </div>
+        <div class="syntax-col">
+          <h4>词内限定与取字</h4>
+          <ul>
+            <li><code>[#9画]{4}</code> — 四字词，每字皆 9 画</li>
+            <li><code>[#声母zh]{2}</code> — 二字词皆 zh 声母</li>
+            <li><code>@?风</code> — 交出能组成 X风 的那个字</li>
+            <li><code>@?风&amp;@金?</code> — 同时满足两个条件的字</li>
+            <li><code>&amp;</code> — 交集，两侧条件都要满足</li>
+          </ul>
+        </div>
+      </div>
+    </details>
   </section>
 
   <section class="quick">
@@ -36,9 +75,10 @@
     <button class="chip" data-q=".国">.国</button>
     <button class="chip" data-q="[东西南北]风">[东西南北]风</button>
     <button class="chip" data-q=".{2}">.{2}</button>
-    <button class="chip" data-q="中.">中.</button>
     <button class="chip" data-q="..*人">..*人</button>
-    <button class="chip" data-q="[一二三四五六七八九十]{1}">数字</button>
+    <button class="chip" data-q="#声调1,声母zh,首笔点">一声+zh+首笔点</button>
+    <button class="chip" data-q="[#9画]{4}">四字全9画</button>
+    <button class="chip" data-q="@?风&@金?">X风 且 金X</button>
   </section>
 
   <section id="results" class="results"></section>

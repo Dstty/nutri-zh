@@ -120,8 +120,12 @@ function runSearch() {
   if (!raw) { setStat('待输入'); return; }
 
   let text = raw;
-  if (el.withChars.checked && !/^G/i.test(text)) text = 'G' + text;
-  if (el.anchored.checked) text = '^' + text.replace(/^\^/, '').replace(/\$$/, '') + '$';
+  // 属性查询/交集不加 G 与锚定前缀
+  const isSpecial = /^#/.test(text) || text.includes('+');
+  if (!isSpecial) {
+    if (el.withChars.checked && !/^G/i.test(text)) text = 'G' + text;
+    if (el.anchored.checked) text = '^' + text.replace(/^\^/, '').replace(/\$$/, '') + '$';
+  }
 
   const engine = createSearch(corpus, text);
   if (engine.error) {
@@ -130,22 +134,12 @@ function runSearch() {
     return;
   }
 
-  const q = engine.query;
-  const ranges = blocksForLength(q.minLen, q.maxLen);
-  if (!ranges.length) {
-    setStat('<b>0</b> 个结果');
-    el.empty.hidden = false;
-    return;
-  }
-
   session = {
-    engine, q, ranges,
-    rangePos: 0,
-    blockCursor: ranges[0][0],
+    engine, q: engine.query,
+    blockCursor: 0,
     cancelled: false,
     matches: [],
     seen: new Set(),
-    scanned: 0,
     t0: performance.now(),
     finished: false,
   };
@@ -157,33 +151,47 @@ function runSearch() {
 function pump() {
   if (!session || session.cancelled) return;
   const s = session;
+  const total = s.engine.totalBlocks;
   const deadline = performance.now() + FRAME_MS;
   const buf = [];
 
-  while (performance.now() < deadline) {
-    if (s.rangePos >= s.ranges.length) { s.finished = true; break; }
-    const [, end] = s.ranges[s.rangePos];
-    if (s.blockCursor >= end) {
-      s.rangePos++;
-      if (s.rangePos < s.ranges.length) s.blockCursor = s.ranges[s.rangePos][0];
-      continue;
-    }
-    // 逐块扫描
-    const from = s.blockCursor;
-    s.engine.scanBlocks(from, from + 1, buf);
+  while (performance.now() < deadline && s.blockCursor < total) {
+    s.engine.scanBlock(s.blockCursor, buf);
     s.blockCursor++;
-    s.scanned += corpus.blockSize;
   }
 
-  if (buf.length) {
-    for (const hit of buf) {
-      const word = corpus.wordAt(hit.i);
-      if (s.seen.has(word)) continue;
-      s.seen.add(word);
-      s.matches.push({ word, len: hit.len, i: hit.i });
-    }
-    render();
+  for (const item of buf) {
+    const word = item.ch ?? corpus.wordAt(item.i);
+    if (s.seen.has(word)) continue;
+    s.seen.add(word);
+    s.matches.push({ word, len: item.len ?? 1, i: item.i, isChar: !!item.ch, info: item.info });
   }
+
+  if (s.blockCursor >= total) {
+    s.finished = true;
+    if (s.engine.kind === 'and') {
+      for (const it of s.engine.finish()) {
+        if (s.seen.has(it.word)) continue;
+        s.seen.add(it.word);
+        s.matches.push({ word: it.word, len: it.word.length, i: -1, isChar: it.isChar, info: it.info });
+      }
+    } else if (typeof s.engine.finalize === 'function') {
+      const items = s.engine.finalize(s.matches.map((m) => ({ ch: m.word })));
+      if (items.length !== s.matches.length) {
+        s.matches = items.map((it) => ({
+          word: it.ch ?? it.word,
+          len: (it.ch ?? it.word).length,
+          isChar: !!it.ch,
+          info: it.info,
+        }));
+      } else {
+        s.matches.sort((a, b) =>
+          ((corpus.chars.get(b.word)?.weight) || 0) - ((corpus.chars.get(a.word)?.weight) || 0));
+      }
+    }
+  }
+
+  if (buf.length || s.finished) render();
   updateStat();
 
   if (!s.finished) requestAnimationFrame(pump);
@@ -237,16 +245,27 @@ function makeCard(m, isChar) {
   w.textContent = m.word;
   card.appendChild(w);
 
-  const info = isChar ? corpus.chars.get(m.word) : null;
-  if (isChar && info && info.strokes) {
+  const info = isChar ? (m.info || corpus.chars.get(m.word)) : null;
+  if (isChar && info && info.strokeNames) {
     const st = document.createElement('div');
     st.className = 'strokes';
-    for (const code of info.strokes) {
+    for (const nm of info.strokeNames) {
       const span = document.createElement('span');
-      span.textContent = strokeName(code);
+      span.textContent = nm;
       st.appendChild(span);
     }
     card.appendChild(st);
+    if (info.pinyin) {
+      const py = document.createElement('div');
+      py.className = 'meta';
+      py.textContent = info.pinyin;
+      card.appendChild(py);
+    }
+  } else if (isChar && info && info.strokes) {
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `${info.strokes.length} 画`;
+    card.appendChild(meta);
   } else {
     const meta = document.createElement('div');
     meta.className = 'meta';
@@ -289,7 +308,8 @@ function updateStat(done = false) {
   if (!session) return;
   const n = session.matches.length;
   const ms = performance.now() - session.t0;
-  const pct = Math.min(100, (session.blockCursor / corpus.blockCount) * 100).toFixed(0);
+  const total = session.engine.totalBlocks || 1;
+  const pct = Math.min(100, (session.blockCursor / total) * 100).toFixed(0);
   const tail = done
     ? ''
     : ` <span class="dim">· 已扫 ${pct}%</span>`;
