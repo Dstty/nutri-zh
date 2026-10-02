@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>汉字正则查找 · 字词</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="top">
+  <h1><span class="seal">字</span>汉字正则查找</h1>
+  <p class="tagline">在一百万字词中按模式检索 —— <code>.</code> 匹配任一字符，<code>[东西南北]风</code>、<code>{2}</code> 限定词长</p>
+</header>
+
+<main class="wrap">
+  <section class="searchbox">
+    <div class="field">
+      <input id="q" type="text" autocomplete="off" spellcheck="false"
+             placeholder="输入模式，例如   .国   或   [东西南北]风   或   .{2}">
+      <button id="go" class="primary" title="搜索 (Enter)">查找</button>
+      <button id="clear" title="清空 (Esc)">清空</button>
+    </div>
+    <div class="controls">
+      <label class="chk"><input type="checkbox" id="withChars"> 同时列字</label>
+      <label class="chk"><input type="checkbox" id="anchored"> 整词匹配</label>
+      <span class="grow"></span>
+      <span id="stat" class="stat">待输入</span>
+    </div>
+    <div id="err" class="err" hidden></div>
+  </section>
+
+  <section class="quick">
+    <span class="quick-label">试：</span>
+    <button class="chip" data-q=".国">.国</button>
+    <button class="chip" data-q="[东西南北]风">[东西南北]风</button>
+    <button class="chip" data-q=".{2}">.{2}</button>
+    <button class="chip" data-q="中.">中.</button>
+    <button class="chip" data-q="..*人">..*人</button>
+    <button class="chip" data-q="[一二三四五六七八九十]{1}">数字</button>
+  </section>
+
+  <section id="results" class="results"></section>
+  <div id="more" class="more" hidden>
+    <button id="moreBtn">继续加载更多</button>
+  </div>
+  <div id="empty" class="empty" hidden>没有匹配的字词</div>
+</main>
+
+<footer class="foot">
+  <span id="dataset">数据集加载中…</span>
+  <span class="sep">·</span>
+  <a href="https://github.com/Dstty/nutrimatic-zh" id="repoLink">GitHub</a>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

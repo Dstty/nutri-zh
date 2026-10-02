@@ -1,0 +1,20 @@
+# 源词表(14MB, 可由 rime 词库重建, 不入库)
+data/wordlist.tsv
+
+# 构建源数据(体积大, 见 README「重建索引」)
+data/*.dict.yaml
+data/essay.txt
+data/jieba_dict.txt
+data/Unihan/
+data/Unihan.zip
+
+# 临时/调试
+.chrome-profile/
+_*.html
+*.log
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
