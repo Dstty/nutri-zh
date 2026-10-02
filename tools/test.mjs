@@ -7,8 +7,8 @@
  */
 const BASE = process.argv[2] || 'http://127.0.0.1:8765/';
 
-const { compilePattern } = await import('../web/js/regex.js');
-const { buildCorpus, createSearch } = await import('../web/js/corpus.js');
+const { compilePattern } = await import('../js/regex.js');
+const { buildCorpus, createSearch } = await import('../js/corpus.js');
 const { fetchJson, fetchGunzip } = await import('./http_fetch.mjs');
 
 let pass = 0, fail = 0;
@@ -45,9 +45,9 @@ ok('［］ 被归一', compilePattern('［东西南北］风').test('东风'));
 console.log('\n== 数据加载 ==');
 const t0 = performance.now();
 const [meta, charsGz, wordsGz] = await Promise.all([
-  fetchJson(BASE + 'data/meta.json'),
-  fetchGunzip(BASE + 'data/chars.txt.gz'),
-  fetchGunzip(BASE + 'data/words.bin.gz'),
+  fetchJson(BASE + 'asset/meta.json'),
+  fetchGunzip(BASE + 'asset/chars.txt.gz'),
+  fetchGunzip(BASE + 'asset/words.bin.gz'),
 ]);
 const corpus = buildCorpus(meta, charsGz, wordsGz);
 console.log(`  载入耗时 ${((performance.now() - t0) / 1000).toFixed(2)}s`);

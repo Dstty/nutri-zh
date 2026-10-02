@@ -5,7 +5,7 @@ import { gunzipSync } from 'node:zlib';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const WEBROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'web');
+const WEBROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // ---------- 极简 DOM ----------
 class E {
@@ -114,13 +114,13 @@ console.log('== UI 冒烟 ==');
 // 直接装配语料并注入, 绕开 Node 下 fetch+DecompressionStream 的组合问题;
 // 被测的 app.js 与浏览器完全同一份。
 {
-  const { buildCorpus } = await import('../web/js/corpus.js');
+  const { buildCorpus } = await import('../js/corpus.js');
   const gz = (p) => new Uint8Array(gunzipSync(readFileSync(join(WEBROOT, p))));
-  const meta = JSON.parse(readFileSync(join(WEBROOT, 'data/meta.json'), 'utf8'));
-  globalThis.__CORPUS__ = buildCorpus(meta, gz('data/chars.txt.gz'), gz('data/words.bin.gz'));
+  const meta = JSON.parse(readFileSync(join(WEBROOT, 'asset/meta.json'), 'utf8'));
+  globalThis.__CORPUS__ = buildCorpus(meta, gz('asset/chars.txt.gz'), gz('asset/words.bin.gz'));
   console.log(`  注入语料: ${globalThis.__CORPUS__.wordCount} 词`);
 }
-await import('../web/js/app.js');
+await import('../js/app.js');
 
 // 步骤 1: 确认模块确实执行(boot 至少写过 dataset 或 err)
 let booted = false;

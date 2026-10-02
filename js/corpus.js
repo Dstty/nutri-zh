@@ -38,7 +38,7 @@ export class Corpus {
    * opts.gunzip 可注入自定义解压(测试环境用), 默认走浏览器流式解压。
    * opts.fetch 可注入取数实现。
    */
-  static async load(base = 'data/', opts = {}) {
+  static async load(base = 'asset/', opts = {}) {
     const doFetch = opts.fetch || ((u) => fetch(u));
     const unzip = opts.gunzip || ((u) => gunzip(u, doFetch));
     const [meta, charsGz, wordsGz] = await Promise.all([

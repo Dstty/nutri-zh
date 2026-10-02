@@ -35,7 +35,7 @@ let limit = LIMIT_DEFAULT;
   try {
     const t0 = performance.now();
     // 测试环境可注入语料实例; 正常浏览器走 Corpus.load
-    corpus = globalThis.__CORPUS__ || await Corpus.load('data/');
+    corpus = globalThis.__CORPUS__ || await Corpus.load('asset/');
     const dt = ((performance.now() - t0) / 1000).toFixed(2);
     el.dataset.textContent =
       `${corpus.meta.words.toLocaleString()} 词 · ${corpus.meta.chars.toLocaleString()} 字 · 载入 ${dt}s`;

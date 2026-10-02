@@ -20,7 +20,7 @@ import threading
 import webbrowser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-WEB = os.path.join(ROOT, "web")
+WEB = ROOT
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -46,10 +46,10 @@ def main():
     args = ap.parse_args()
 
     if not os.path.isdir(WEB):
-        sys.exit(f"找不到 web/ 目录: {WEB}")
-    if not os.path.exists(os.path.join(WEB, "data", "words.bin.gz")):
+        sys.exit(f"找不到站点目录: {WEB}")
+    if not os.path.exists(os.path.join(WEB, "asset", "words.bin.gz")):
         sys.exit(
-            "缺少数据文件 web/data/words.bin.gz\n"
+            "缺少数据文件 asset/words.bin.gz\n"
             "请先运行:  node tools/build_index.mjs")
 
     socketserver.TCPServer.allow_reuse_address = True

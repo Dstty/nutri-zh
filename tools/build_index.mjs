@@ -1,6 +1,6 @@
 /* 从汉字全息数据集生成 Web 查询索引。
  *
- * 产出(web/data/):
+ * 产出(asset/):
  *   chars.txt.gz  单字: 字\t笔画码串\t权重
  *   words.bin.gz  词流 + 块级首字倒排(见下)
  *   meta.json     元信息
@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..');
 const SRC = process.env.HZ_SRC || join(REPO, '..');
-const OUT = join(REPO, 'web', 'data');
+const OUT = join(REPO, 'asset');
 
 const BLOCK_SIZE = 1024;
 
